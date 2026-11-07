@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Favourite Flowers</title>
+    <style>
+        :root {
+            --primary: #d4a373;
+            --background: #fefae0;
+            --card-bg: #ffffff;
+            --text: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #606c38;
+            margin-bottom: 10px;
+        }
+
+        .upload-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        input[type="text"], input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #283618;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #606c38;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .flower-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .flower-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .flower-info {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .flower-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .delete-btn {
+            background-color: #e63946;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c1121f;
+        }
+
+        .empty-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🌸 My Favourite Flowers 🌸</h1>
+    <p>Upload your favorite flower images. They will stay saved in your browser cache!</p>
+
+    <div class="upload-section">
+        <input type="text" id="flowerName" placeholder="Enter flower name (e.g., Rose, Sunflower)" required>
+        <input type="file" id="flowerImage" accept="image/*" required>
+        <button onclick="addFlower()">Add to Gallery</button>
+    </div>
+
+    <div class="gallery" id="gallery">
+        <!-- Flowers will be injected here dynamically -->
+    </div>
+
+    <script>
+        // Key used to reference data inside LocalStorage
+        const STORAGE_KEY = 'my_favourite_flowers';
+
+        // Load items from cache immediately on startup
+        document.addEventListener('DOMContentLoaded', loadFlowers);
+
+        function addFlower() {
+            const nameInput = document.getElementById('flowerName');
+            const fileInput = document.getElementById('flowerImage');
+            
+            const name = nameInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!name || !file) {
+                alert('Please fill out the flower name and select an image file.');
+                return;
+            }
+
+            // Read file data and convert it into a Base64 text string
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const base64Image = event.target.result;
+                
+                const newFlower = {
+                    id: Date.now(),
+                    name: name,
+                    image: base64Image
+                };
+
+                saveFlowerToCache(newFlower);
+                
+                // Clear input form fields
+                nameInput.value = '';
+                fileInput.value = '';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        function saveFlowerToCache(flowerObj) {
+            let flowers = getFlowersFromCache();
+            flowers.push(flowerObj);
+            
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(flowers));
+                renderGallery();
+            } catch (error) {
+                // LocalStorage typically maxes out around 5MB
+                alert('Storage limit reached! Please delete older flower images to free up space.');
+                console.error('Storage error:', error);
+            }
+        }
+
+        function getFlowersFromCache() {
+            const cachedData = localStorage.getItem(STORAGE_KEY);
+            return cachedData ? JSON.parse(cachedData) : [];
+        }
+
+        function deleteFlower(id) {
+            let flowers = getFlowersFromCache();
+            flowers = flowers.filter(flower => flower.id !== id);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(flowers));
+            renderGallery();
+        }
+
+        function loadFlowers() {
+            renderGallery();
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            const flowers = getFlowersFromCache();
+            
+            gallery.innerHTML = '';
+
+            if (flowers.length === 0) {
+                gallery.innerHTML = '<p class="empty-message">Your gallery is currently empty. Add some flowers above!</p>';
+                return;
+            }
+
+            flowers.forEach(flower => {
+                const card = document.createElement('div');
+                card.className = 'flower-card';
+                card.innerHTML = `
+                    <img src="${flower.image}" alt="${flower.name}">
+                    <div class="flower-info">
+                        <p class="flower-name">${escapeHTML(flower.name)}</p>
+                        <button class="delete-btn" onclick="deleteFlower(${flower.id})">Remove</button>
+                    </div>
+                `;
+                gallery.appendChild(card);
+            });
+        }
+
+        // Helper function to prevent malicious XSS text execution
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
