@@ -1,2 +1,2 @@
 # add-your-flowers
-demo for GitHub Class
+This repo hold the code for a website which let's you add images of your favorite flowers.
